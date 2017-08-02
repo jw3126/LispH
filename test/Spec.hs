@@ -1,5 +1,6 @@
 import Test.HUnit
-import Lib
+import Parser
+import Expr
 import Text.ParserCombinators.Parsec
 
 testParse :: String -> Ex -> IO ()

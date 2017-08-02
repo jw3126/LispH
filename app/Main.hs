@@ -1,6 +1,6 @@
 module Main where
 import Text.ParserCombinators.Parsec
-import Lib
+import Parser
 
 main :: IO ()
 main = do

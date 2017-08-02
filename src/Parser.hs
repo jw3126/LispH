@@ -1,23 +1,15 @@
-module Lib
+module Parser
     ( expression
-     , Ex(ExInteger, ExList, ExAtom, ExBool, ExString)
     ) where
 
+import Expr
 import Text.ParserCombinators.Parsec
 import Control.Monad
-
-data Ex = ExInteger Integer 
-    | ExList [Ex] 
-    | ExAtom String 
-    | ExString String
-    | ExBool Bool deriving (Show, Eq)
-
--- ExInteger a = ExInteger a
 
 expression :: Parser Ex
 expression = do 
     skipMany space
-    (try list) <|> (try integer) <|> (try atomOrBool) <|> (try Lib.string)
+    (try list) <|> (try integer) <|> (try atomOrBool) <|> (try Parser.string)
 
 integer :: Parser Ex
 integer = do
