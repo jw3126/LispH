@@ -1,10 +1,13 @@
 module Parser
-    ( expression
+    ( expression,
+    parseEx
     ) where
 
 import Expr
 import Text.ParserCombinators.Parsec
 import Control.Monad
+
+parseEx s = parse expression "" s
 
 expression :: Parser Ex
 expression = do 
