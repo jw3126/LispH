@@ -28,4 +28,6 @@ repl1 = do
     ex <- readEx
     putStrLn $ show ex
     putStrLn $ toString ex
-    putStrLn $ toString $ eval ex
+    case (eval ex) of
+        Left err -> putStrLn err
+        Right res -> putStrLn $ show res
