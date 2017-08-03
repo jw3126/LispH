@@ -4,6 +4,8 @@ module Repl(
 
 import Parser
 import Expr
+import Eval
+import System.IO
 
 repl :: IO ()
 repl = do
@@ -21,6 +23,9 @@ readEx = do
 
 repl1 :: IO ()
 repl1 = do
+    putStr "lisp>"
+    hFlush stdout
     ex <- readEx
-    print $ show ex
-    print $ toString ex
+    putStrLn $ show ex
+    putStrLn $ toString ex
+    putStrLn $ toString $ eval ex

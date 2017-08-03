@@ -4,16 +4,6 @@ import Expr
 import Test.QuickCheck
 import Control.Monad
 
--- arbitraryInteger = 
-
--- instance Arbitrary Ex where
---     arbitrary = oneof [
--- 
---
---
---
---
-
 arbitraryExBool :: Gen Ex
 arbitraryExBool = do
     b <- arbitrary
@@ -51,6 +41,7 @@ arbitrarySizedEx n = oneof [arbitraryExInteger
     , arbitraryExAtom
     , arbitrarySizedExList n
     ]
+
 arbitrarySizedExList :: Integer -> Gen Ex
 arbitrarySizedExList 0 = return $ ExList []
 arbitrarySizedExList n = do
@@ -84,9 +75,8 @@ main = do
     testParse "(foo 1 #t)" (ExList [ExAtom "foo", ExInteger 1, ExBool True])
     testParse "(foo? 112 #t)" (ExList [ExAtom "foo?", ExInteger 112, ExBool True])
     testParse "(f \"abc\")" (ExList [ExAtom "f", ExString "abc"])
---    testParse "-1" (ExInteger (-1))
 
     ex <- generate arbitraryEx 
-    print $ show ex
-    print $ toString ex
+    putStrLn $ show ex
+    putStrLn $ toString ex
     quickCheck prop_inverse
