@@ -23,3 +23,4 @@ repl1 :: IO ()
 repl1 = do
     ex <- readEx
     print $ show ex
+    print $ toString ex

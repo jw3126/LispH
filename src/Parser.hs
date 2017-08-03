@@ -17,8 +17,20 @@ expression = do
 integer :: Parser Ex
 integer = do
     skipMany space
-    s <- many1 digit
-    return (ExInteger (read s))
+    s <- sign
+    dgts <- many1 digit
+    return $ ExInteger ( s * (read dgts))
+
+sign :: Parser Integer
+sign = do
+    hassign <- optionMaybe $ char '-'
+    return $ signHelper hassign
+
+signHelper :: Maybe Char -> Integer
+signHelper c = case c of 
+    Just _ -> -1
+    Nothing -> 1
+
 
 list :: Parser Ex
 list = do
