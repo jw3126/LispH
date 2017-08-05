@@ -1,5 +1,10 @@
 module Main where
 import Repl
+import Eval
+import Data.Map
+import Control.Monad.State.Lazy 
 
-main :: IO ()
-main = repl
+store::Store
+store = empty
+
+main = evalStateT repl store
