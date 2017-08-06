@@ -4,19 +4,19 @@ module Parser
     ) where
 
 import Expr
-import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec -- MegaParsec
 import Control.Monad
 
 parseEx s = parse expression "" s
 
+-- TODO split out lexer
+
 expression :: Parser Ex
 expression = do 
-    skipMany space
     (try list) <|> (try integer) <|> (try symbolOrBool) <|> (try Parser.string)
 
 integer :: Parser Ex
 integer = do
-    skipMany space
     s <- sign
     dgts <- many1 digit
     return $ ExInteger ( s * (read dgts))
@@ -33,10 +33,9 @@ signHelper c = case c of
 
 list :: Parser Ex
 list = do
-    skipMany space
     char '('
     skipMany space
-    args <- many (try expression)
+    args <- sepBy expression $ many1 space
     skipMany space
     char ')'
     return (ExList args)
@@ -53,7 +52,6 @@ digestSymbolOrBool  s = case s of
 
 symbolOrBool ::Parser Ex
 symbolOrBool = do
-    skipMany space
     first <- letter <|> specialChar
     rest <- many (letter <|> digit <|> specialChar)
     return $ digestSymbolOrBool (first:rest)
