@@ -12,7 +12,7 @@ parseEx s = parse expression "" s
 expression :: Parser Ex
 expression = do 
     skipMany space
-    (try list) <|> (try integer) <|> (try atomOrBool) <|> (try Parser.string)
+    (try list) <|> (try integer) <|> (try symbolOrBool) <|> (try Parser.string)
 
 integer :: Parser Ex
 integer = do
@@ -31,7 +31,6 @@ signHelper c = case c of
     Just _ -> -1
     Nothing -> 1
 
-
 list :: Parser Ex
 list = do
     skipMany space
@@ -42,22 +41,22 @@ list = do
     char ')'
     return (ExList args)
 
---these are the allowed chars in identifiers
-symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+--these are the allowed chars in a symbol
+specialChar :: Parser Char
+specialChar = oneOf "!#$%&|*+-/:<=>?@^_~"
 
-digestAtomOrBool :: String -> Ex
-digestAtomOrBool  s = case s of
+digestSymbolOrBool :: String -> Ex
+digestSymbolOrBool  s = case s of
                "#t" -> ExBool True
                "#f" -> ExBool False
-               otherwise -> ExAtom s
+               otherwise -> ExSymbol s
 
-atomOrBool ::Parser Ex
-atomOrBool = do
+symbolOrBool ::Parser Ex
+symbolOrBool = do
     skipMany space
-    first <- letter <|> symbol
-    rest <- many (letter <|> digit <|> symbol)
-    return $ digestAtomOrBool (first:rest)
+    first <- letter <|> specialChar
+    rest <- many (letter <|> digit <|> specialChar)
+    return $ digestSymbolOrBool (first:rest)
 
 string :: Parser Ex
 string = do
