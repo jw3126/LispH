@@ -79,6 +79,7 @@ testParserMain = do
     testParse "(foo 1 #t)" (ExList [ExSymbol "foo", ExInteger 1, ExBool True])
     testParse "(foo? 112 #t)" (ExList [ExSymbol "foo?", ExInteger 112, ExBool True])
     testParse "(f \"abc\")" (ExList [ExSymbol "f", ExString "abc"])
+    testParse "     (+ 1     1)" (ExList [ExSymbol "+", ExInteger 1, ExInteger 1])
 
     ex <- generate arbitraryEx 
     putStrLn $ show ex

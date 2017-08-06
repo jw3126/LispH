@@ -13,6 +13,7 @@ parseEx s = parse expression "" s
 
 expression :: Parser Ex
 expression = do 
+    skipMany space
     (try list) <|> (try integer) <|> (try symbolOrBool) <|> (try Parser.string)
 
 integer :: Parser Ex

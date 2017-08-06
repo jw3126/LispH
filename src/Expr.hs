@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Expr
     (
      Ex(ExInteger, ExList, ExSymbol, ExBool, ExString, ExFunction)
@@ -6,27 +8,20 @@ module Expr
     , falseString, trueString
     ) where
 
-import Data.List
 import Data.Hashable
+import Data.List (intercalate)
+import GHC.Generics (Generic)
 
 type EvalResult = Either String Ex
 
 data Ex = ExInteger Integer 
     | ExList [Ex] 
-    | ExSymbol String 
+    | ExSymbol String -- TODO ExVar
     | ExString String
-    | ExFunction [Ex] Ex
-    | ExBool Bool deriving (Show, Eq)
+    | ExFunction [Ex] Ex --TODO (String, Maybe Ex)
+    | ExBool Bool deriving (Show, Eq, Generic)
 
--- TODO is there an automatic way to do this?
-instance Hashable Ex where
-    hashWithSalt salt (ExInteger inner) = hashWithSalt salt inner
-    hashWithSalt salt (ExList inner) = hashWithSalt salt inner
-    hashWithSalt salt (ExSymbol inner) = hashWithSalt salt inner
-    hashWithSalt salt (ExString inner) = hashWithSalt salt inner
-    hashWithSalt salt (ExBool inner) = hashWithSalt salt inner
-    hashWithSalt salt (ExFunction args body) = 
-        hashWithSalt (hashWithSalt salt args) body
+instance Hashable Ex
 
 falseString = "#f"
 trueString = "#t"
