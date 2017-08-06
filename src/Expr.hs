@@ -20,6 +20,7 @@ data Ex = ExInteger Integer
 
 -- TODO is there an automatic way to do this?
 instance Hashable Ex where
+    hashWithSalt salt (ExInteger inner) = hashWithSalt salt inner
     hashWithSalt salt (ExList inner) = hashWithSalt salt inner
     hashWithSalt salt (ExSymbol inner) = hashWithSalt salt inner
     hashWithSalt salt (ExString inner) = hashWithSalt salt inner

@@ -1,5 +1,6 @@
 module Repl(
-    repl
+    repl,
+    evalString
 ) where
 
 import Parser
@@ -31,3 +32,8 @@ readEx = do
             print err
             readEx
         Right ex -> return ex
+
+evalString :: String -> InterpreterM Ex
+evalString s = case parseEx s of
+    Left err -> return $ Left $ ParserError $ show err
+    Right ex -> eval ex

@@ -1,7 +1,10 @@
 module Eval(
     Store,
     InterpreterM,
-    eval
+    eval,
+    Error(..),
+    Errorful,
+    emptyStore
 ) where
 
 import Expr
@@ -15,11 +18,15 @@ data Error = TodoError String
     | UndefinedVariable Ex
     | UndefindedEval Ex
     | WrongNumberOfArguments [Ex] [Ex]
-    deriving (Show)
+    | ParserError String
+    deriving (Show, Eq)
 
 type Errorful t = Either Error t
 type Store = Map.Map String Ex
 type InterpreterM t = StateT Store IO (Errorful t)
+
+emptyStore :: Store
+emptyStore = Map.empty
 
 lookupInStore :: String -> InterpreterM Ex
 lookupInStore s = do
@@ -91,8 +98,13 @@ evalListElements items = let
     in c
 
 evalBuiltinSpecialForm :: Ex -> InterpreterM Ex
-evalBuiltinSpecialForm (ExList ((ExSymbol "fn"):(ExList args):[body])) = return $ Right $ ExFunction args body
-evalBuiltinSpecialForm x@(ExList ((ExSymbol "set"):(ExSymbol key):[val])) = insertStore key val
+evalBuiltinSpecialForm (ExList ((ExSymbol "fn"):(ExList args):[body])) = 
+    return $ Right $ ExFunction args body
+evalBuiltinSpecialForm x@(ExList ((ExSymbol "set"):(ExSymbol key):[val])) = 
+    eval val >>= (\eex -> case eex of
+        Right ex -> insertStore key ex
+        Left err -> return $ Left err
+    )
 evalBuiltinSpecialForm x = error $ "evalBuiltinSpecialForm on " ++ (show x)
 
 evalBuiltinFunction :: Ex -> InterpreterM Ex

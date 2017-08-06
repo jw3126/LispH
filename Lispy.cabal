@@ -47,6 +47,7 @@ test-suite Lispy-test
                      , parsec
                      , HUnit
                      , QuickCheck
+                     , mtl
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   other-modules:       Test.Parser
                      , Test.Eval
