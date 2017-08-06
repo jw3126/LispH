@@ -18,10 +18,13 @@ repl1 = do
     liftIO $ putStr "lisp>"
     liftIO $ hFlush stdout
     ex <- liftIO readEx
-    liftIO $ putStrLn $ show ex
-    liftIO $ putStrLn $ toString ex
+--     liftIO $ putStrLn $ show ex
+--     liftIO $ putStrLn $ toString ex
     exres <- eval ex
-    liftIO $ putStrLn $ show exres
+--     liftIO $ putStrLn $ show exres
+    liftIO $ putStrLn $ case exres of 
+        Right exx -> toString exx
+        Left err -> show err
     return exres
 
 readEx :: IO Ex

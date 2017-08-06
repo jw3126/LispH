@@ -1,4 +1,4 @@
-module Test.Eval 
+module Test.Eval
     (testEvalMain)
 where
 
@@ -11,10 +11,9 @@ import Control.Monad
 import Control.Monad.State.Lazy
 
 testEvalMain :: IO ()
-testEvalMain = 
+testEvalMain =
     (runStateT testM emptyStore) >>
     putStrLn "testEvalMain"
-
 
 testEvalString :: String -> Ex -> InterpreterM ()
 testEvalString s expected = do
@@ -48,3 +47,7 @@ testM = do
     testEvalString "(cub 3)" $ ExInteger 27
     testEvalString "x" $ ExInteger 2
     testEvalString "(cub x)" $ ExInteger 8
+
+    -- higher order function
+    evalString "(set adder (fn (n) (fn (x) (+ x n))))"
+    testEvalString "((adder 1) 2)" $ ExInteger 3

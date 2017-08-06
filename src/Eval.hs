@@ -10,7 +10,6 @@ module Eval(
 import Expr
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
--- import Data.Map
 import Control.Monad.State.Lazy 
 
 data Error = TodoError String
