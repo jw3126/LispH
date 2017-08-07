@@ -2,71 +2,107 @@ module Eval(
     Store,
     InterpreterM,
     eval,
-    Error(..),
-    Errorful,
     emptyStore
 ) where
 
 import Expr
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
+import Data.Maybe (fromJust)
 import Control.Monad.State.Lazy 
+import Control.Monad.Except
 
-data Error = TodoError String
-    | TypeMismatch Ex String
-    | UndefinedVariable Ex
-    | UndefindedEval Ex
-    | WrongNumberOfArguments [Ex] [Ex]
-    | ParserError String
-    deriving (Show, Eq)
-
-type Errorful t = Either Error t
 type Store = Map.Map String Ex
-type InterpreterM t = StateT Store IO (Errorful t)
+
+-- type InterpreterM a = ExceptT Error (StateT Store IO) a
+type InterpreterM a = StateT Store (ExceptT Error IO) a
+
+exceptI :: Either Error t -> InterpreterM t
+exceptI x = lift inner where
+    inner = case x of
+        Left err -> throwError err
+        Right ex -> return ex
+
+throwI :: Error -> InterpreterM t
+throwI err = throwI err
+
+-- StateT Store IO a == Store -> IO (Store, a)
+-- ExceptT Error (StateT Store IO) a == Store -> IO (Either Error a, Store)
+-- ExceptT Error IO = IO (Either Error a)
+-- StateT Store (ExceptT Error IO) a == Store -> IO (Either Error (a, Store))
 
 emptyStore :: Store
 emptyStore = Map.empty
 
+
 lookupInStore :: String -> InterpreterM Ex
-lookupInStore s = do
-    store <- get
-    case Map.lookup s store of
-        Nothing -> return $ Left $ UndefinedVariable $ ExSymbol s
-        Just x -> return $ Right x
+lookupInStore s = get >>= (\store -> let
+    exe :: Either Error Ex
+    exe = case Map.lookup s store of
+            Nothing -> Left $ UndefindedEval $ ExSymbol s
+            Just ex -> Right ex
+    in
+    exceptI exe)
 
 insertStore :: String -> Ex -> InterpreterM Ex
 insertStore key val = do
     store <- get
     put $ Map.insert key val store
-    return $ Right val
+    return val
+    
 
-builtinFunctions = map ExSymbol [
-    "+"
-    , "-"
-    , "*"
---     , "eval"
-    ]
-
-builtinSpecialForms = map ExSymbol [
+builtinSpecialForms = [
     "set"
     , "fn"
-    , "quote"
+    , "quote" -- TODO
     ]
 
+type BuiltinFunctionRegistry = HashMap.HashMap String ([Ex] -> InterpreterM Ex)
+
+-- the _ argument is for guiding type inference
+registerHaskellFunction :: (ExAble a, ExAble b) => 
+    String -> (b -> a -> b) -> b  -> BuiltinFunctionRegistry -> BuiltinFunctionRegistry
+registerHaskellFunction key f v0  registry = let
+    val :: ([Ex] -> InterpreterM Ex)
+    val = \exs -> exceptI $ (foldlHaskellFunction f v0 exs)
+    in HashMap.insert key val registry
+
+builtinFunctionRegistry :: BuiltinFunctionRegistry
+builtinFunctionRegistry = let
+    registry :: BuiltinFunctionRegistry
+    registry = HashMap.empty 
+    rH = registerHaskellFunction
+    -- we need zero, one for to make typeinference easier
+    zero:: Integer
+    zero = 0
+    one :: Integer
+    one = 1
+    in
+     rH  "+"     (+)    zero
+    . rH "-"     (-)    zero
+    . rH "*"     (*)    one
+--     . rH "=="    (==)   True
+--     . rH "<"     (<)    True
+--     . rH ">"     (>)    True
+--     . rH ">="    (>=)   True
+--     . rH "&&"    (&&)   True
+--     . rH "||"    (||)   True
+    $ registry
+
+builtinFunctions = HashMap.keys builtinFunctionRegistry
 builtin = builtinFunctions ++ builtinSpecialForms
 
 eval :: Ex -> InterpreterM Ex
-eval x@(ExInteger _) = return $ Right x
-eval x@(ExBool _) = return $ Right x
-eval x@(ExString _) = return $ Right x
-eval x@(ExFunction _ _) = return $ Right x
-eval x@(ExSymbol s) = if x `elem` builtin then return $ Right x else lookupInStore s
-eval x@(ExList (h:t)) | h `elem` builtinFunctions = evalBuiltinFunction x
-                      | h `elem` builtinSpecialForms = evalBuiltinSpecialForm x
+eval x@(ExInteger _) = return x
+eval x@(ExBool _) = return x
+eval x@(ExString _) = return x
+eval x@(ExFunction _ _) = return x
+eval x@(ExSymbol s) = if s `elem` builtin then return x else lookupInStore s
+eval x@(ExList ((ExSymbol s):t)) | s `elem` builtinFunctions = evalBuiltinFunction x
+                      | s `elem` builtinSpecialForms = evalBuiltinSpecialForm x
                       | otherwise = evalList x
-
-eval x@(ExList []) = evalList x
-eval x = return $ Left $ TodoError $ show x
+eval x@(ExList _) = evalList x
+eval x = throwI $ TodoError $ show x
 
 -- evaluate a ExList
 --
@@ -74,75 +110,66 @@ eval x = return $ Left $ TodoError $ show x
 -- in this case, we don't want to evaluate the arguments immediately
 --
 evalList :: Ex -> InterpreterM Ex
-evalList x@(ExList items) = evalListElements items >>= (\eargs-> case eargs of 
-        Right (f:args) -> (apply f $ args)
-        Right [] -> return $ Left $ TodoError "eval empty list"
-        Left err -> return $ Left $ err
+evalList x@(ExList items) = evalListElements items >>= (\fargs-> case fargs of 
+        (f:args) -> (apply f args)
+        [] -> throwI $ TodoError "eval empty list"
     )
 
 evalList x = error $ "evalList on " ++ (show x)
 
 apply :: Ex -> [Ex] -> InterpreterM Ex
 apply f@(ExFunction _ _) args = applyFunction f args
-apply h t = return $ Left $ TodoError $ "apply" ++ (show h) ++ (show t)
+apply h t = throwI $ TodoError $ "apply" ++ (show h) ++ (show t)
 
 evalListElements :: [Ex] -> InterpreterM [Ex]
-evalListElements items = let
-    a :: [InterpreterM Ex]
-    a = map eval items
-    b :: StateT Store IO [Errorful Ex]
-    b = sequence a
-    c :: InterpreterM [Ex]
-    c = fmap sequence b
-    in c
+evalListElements = mapM eval
 
 evalBuiltinSpecialForm :: Ex -> InterpreterM Ex
 evalBuiltinSpecialForm (ExList ((ExSymbol "fn"):(ExList args):[body])) = 
-    return $ Right $ ExFunction args body
+    return $ ExFunction args body
+
 evalBuiltinSpecialForm x@(ExList ((ExSymbol "set"):(ExSymbol key):[val])) = 
-    eval val >>= (\eex -> case eex of
-        Right ex -> insertStore key ex
-        Left err -> return $ Left err
-    )
+    eval val >>= insertStore key
+
 evalBuiltinSpecialForm x = error $ "evalBuiltinSpecialForm on " ++ (show x)
 
 evalBuiltinFunction :: Ex -> InterpreterM Ex
-evalBuiltinFunction x@(ExList (f:args)) = let
-    applyf :: Errorful [Ex] -> InterpreterM Ex
-    applyf (Right args) = applyBuiltinFunction f args
-    in (evalListElements args) >>= applyf
+evalBuiltinFunction x@(ExList (f:args)) = evalListElements args >>= applyBuiltinFunction f
 
 applyBuiltinFunction :: Ex -> [Ex] -> InterpreterM Ex
-applyBuiltinFunction (ExSymbol "quote") t = return $ Right $ ExList t
-applyBuiltinFunction (ExSymbol "+") t = return $ evalOp (+) 0 t
-applyBuiltinFunction (ExSymbol "*") t = return $ evalOp (*) 1 t
-applyBuiltinFunction (ExSymbol "-") t = return $ evalOp (-) 0 t
+applyBuiltinFunction (ExSymbol s)   t = let
+    f :: [Ex] -> InterpreterM Ex
+    f = fromJust $ HashMap.lookup s builtinFunctionRegistry
+    in f t
 
-liftOpIntInt :: (Integer -> Integer -> Integer) -> (Errorful Ex -> Ex -> Errorful Ex)
-liftOpIntInt op a b = 
-    case a of
-        Left err -> Left err
-        Right a0 -> _liftOpIntInt op a0 b
+applyHaskellFunction :: (ExAble a, ExAble o) => (a -> o) -> Ex -> Errorful Ex
+applyHaskellFunction f ex = do
+    x <- fromEx ex
+    return $ toEx $ f x
 
-_liftOpIntInt :: (Integer -> Integer -> Integer) -> (Ex -> Ex -> Errorful Ex)
-_liftOpIntInt op (ExInteger ia) (ExInteger ib) = Right $ ExInteger $ op ia ib
-_liftOpIntInt op (ExInteger a) b = Left $ TypeMismatch b "Expected Integer"
-_liftOpIntInt op a b = Left $ TypeMismatch a "Expected Integer"
+applyHaskellFunction2 :: (ExAble a, ExAble b, ExAble o) => (a -> b -> o) -> (Errorful Ex) -> Ex -> Errorful Ex
+applyHaskellFunction2 f eex1 ex2 = do
+    ex1 <- eex1
+    x1 <- fromEx ex1
+    x2 <- fromEx ex2
+    return $ toEx $ f x1 x2
 
-evalOp :: (Integer -> Integer -> Integer) -> Integer -> [Ex] -> Errorful Ex
-evalOp op v0 args = foldl (liftOpIntInt op) (Right $ ExInteger v0) args
+foldlHaskellFunction :: (ExAble a, ExAble b) => (b -> a -> b) -> b -> [Ex] -> Errorful Ex
+foldlHaskellFunction f v0 exs = 
+    foldl (applyHaskellFunction2 f) (Right $ toEx v0) exs
 
 applyFunction :: Ex -> [Ex] -> InterpreterM Ex
-applyFunction (ExFunction sig body) args = if length(sig) == (length(args)) then
+applyFunction (ExFunction sig body) args = if length sig == length args then
         let 
             m = HashMap.fromList $ zip sig args
         in
             eval $ substitute m body
     else
-        return $ Left $ WrongNumberOfArguments sig args
+        throwI $ WrongNumberOfArguments sig args
 applyFunction f args  = error $ "Not a function " ++ (show f)
 
 -- TODO quote and functions...
+-- https://en.wikipedia.org/wiki/De_Bruijn_index
 substitute :: (HashMap.HashMap Ex Ex) -> Ex -> Ex
 substitute m ex@(ExList items) = ExList $ map (substitute m) items
 substitute m ex = HashMap.lookupDefault ex ex m
