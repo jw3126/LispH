@@ -51,3 +51,15 @@ testM = do
     -- higher order function
     evalString "(set adder (fn (n) (fn (x) (+ x n))))"
     testEvalString "((adder 1) 2)" $ ExInteger 3
+
+    -- builtin functions
+    
+    testEvalString "(+)" $ ExInteger 0
+    testEvalString "(-)" $ ExInteger 0
+    testEvalString "(*)" $ ExInteger 1
+    testEvalString "(&&)" $ ExBool True
+    testEvalString "(||)" $ ExBool False
+
+    testEvalString "(+ 1 2 3)"  $ ExInteger 6
+    testEvalString "(|| #t #f)" $ ExBool True
+    testEvalString "(&& #t #f)" $ ExBool False

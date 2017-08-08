@@ -88,7 +88,7 @@ builtinFunctionRegistry = let
     . rHII "-"     (-)    0
     . rHII "*"     (*)    1
     . rHBB "&&"    (&&)   True
-    . rHBB "||"    (||)   True
+    . rHBB "||"    (||)   False
     $ registry
 
 -- TODO
