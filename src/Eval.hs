@@ -1,6 +1,9 @@
 module Eval(
     Store,
     InterpreterM,
+    throwI,
+    evalI,
+    exceptI,
     eval,
     emptyStore
 ) where
@@ -13,8 +16,6 @@ import Control.Monad.State.Lazy
 import Control.Monad.Except
 
 type Store = Map.Map String Ex
-
--- type InterpreterM a = ExceptT Error (StateT Store IO) a
 type InterpreterM a = StateT Store (ExceptT Error IO) a
 
 exceptI :: Either Error t -> InterpreterM t
@@ -25,6 +26,9 @@ exceptI x = lift inner where
 
 throwI :: Error -> InterpreterM t
 throwI err = throwI err
+
+evalI :: InterpreterM t -> Store -> IO (Either Error t)
+evalI interpreter store = runExceptT $ evalStateT interpreter store
 
 -- StateT Store IO a == Store -> IO (Store, a)
 -- ExceptT Error (StateT Store IO) a == Store -> IO (Either Error a, Store)
@@ -57,37 +61,41 @@ builtinSpecialForms = [
     , "quote" -- TODO
     ]
 
-type BuiltinFunctionRegistry = HashMap.HashMap String ([Ex] -> InterpreterM Ex)
-
--- the _ argument is for guiding type inference
-registerHaskellFunction :: (ExAble a, ExAble b) => 
+type BuiltinFunction = ([Ex] -> InterpreterM Ex)
+type BuiltinFunctionRegistry = HashMap.HashMap String BuiltinFunction
+type RHF a b = 
     String -> (b -> a -> b) -> b  -> BuiltinFunctionRegistry -> BuiltinFunctionRegistry
-registerHaskellFunction key f v0  registry = let
-    val :: ([Ex] -> InterpreterM Ex)
+-- the _ argument is for guiding type inference
+registerHaskellFunction :: (ExAble a, ExAble b) => RHF a b
+registerHaskellFunction key f v0 registry = let
+    val :: BuiltinFunction
     val = \exs -> exceptI $ (foldlHaskellFunction f v0 exs)
     in HashMap.insert key val registry
+
+rHII :: RHF Integer Integer
+rHII = registerHaskellFunction
+
+rHBB :: RHF Bool Bool
+rHBB = registerHaskellFunction
 
 builtinFunctionRegistry :: BuiltinFunctionRegistry
 builtinFunctionRegistry = let
     registry :: BuiltinFunctionRegistry
     registry = HashMap.empty 
-    rH = registerHaskellFunction
     -- we need zero, one for to make typeinference easier
-    zero:: Integer
-    zero = 0
-    one :: Integer
-    one = 1
     in
-     rH  "+"     (+)    zero
-    . rH "-"     (-)    zero
-    . rH "*"     (*)    one
---     . rH "=="    (==)   True
---     . rH "<"     (<)    True
---     . rH ">"     (>)    True
---     . rH ">="    (>=)   True
---     . rH "&&"    (&&)   True
---     . rH "||"    (||)   True
+     rHII  "+"     (+)    0
+    . rHII "-"     (-)    0
+    . rHII "*"     (*)    1
+    . rHBB "&&"    (&&)   True
+    . rHBB "||"    (||)   True
     $ registry
+
+-- TODO
+-- "=="    (==)   True
+-- "<"     (<)    True
+-- ">"     (>)    True
+-- ">="    (>=)   True
 
 builtinFunctions = HashMap.keys builtinFunctionRegistry
 builtin = builtinFunctions ++ builtinSpecialForms

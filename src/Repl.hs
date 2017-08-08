@@ -1,5 +1,5 @@
 module Repl(
-    repl,
+    mainrepl,
     evalString
 ) where
 
@@ -8,10 +8,14 @@ import Expr
 import Eval
 import System.IO
 import Control.Monad
-import Control.Monad.State.Lazy 
+import Control.Monad.State.Lazy
+import Control.Monad.Except
 
 repl :: InterpreterM Ex
 repl = forever repl1
+
+mainrepl :: IO ()
+mainrepl = (evalI repl emptyStore) >> return ()
 
 repl1 :: InterpreterM Ex
 repl1 = do
@@ -22,9 +26,7 @@ repl1 = do
 --     liftIO $ putStrLn $ toString ex
     exres <- eval ex
 --     liftIO $ putStrLn $ show exres
-    liftIO $ putStrLn $ case exres of 
-        Right exx -> toString exx
-        Left err -> show err
+    liftIO $ putStrLn $ toString $ exres
     return exres
 
 readEx :: IO Ex
@@ -38,5 +40,5 @@ readEx = do
 
 evalString :: String -> InterpreterM Ex
 evalString s = case parseEx s of
-    Left err -> return $ Left $ ParserError $ show err
+    Left err -> throwI $ ParserError $ show err
     Right ex -> eval ex

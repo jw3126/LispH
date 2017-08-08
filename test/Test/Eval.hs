@@ -12,14 +12,14 @@ import Control.Monad.State.Lazy
 
 testEvalMain :: IO ()
 testEvalMain =
-    (runStateT testM emptyStore) >>
+    (evalI testM emptyStore) >>
     putStrLn "testEvalMain"
 
 testEvalString :: String -> Ex -> InterpreterM ()
 testEvalString s expected = do
     ans <- evalString s
-    liftIO $ assertEqual s ans $ Right expected
-    return $ Right ()
+    liftIO $ assertEqual s ans expected
+    -- return $ Right ()
 
 testM :: InterpreterM ()
 testM = do
