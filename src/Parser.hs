@@ -12,7 +12,7 @@ parseEx s = parse expression "parseEx error" s
 -- TODO split out lexer
 
 expression :: Parser Ex
-expression = do 
+expression = do
     skipMany space
     (try list) <|> (try integer) <|> (try symbolOrBool) <|> (try Parser.string)
 
@@ -28,7 +28,7 @@ sign = do
     return $ signHelper hassign
 
 signHelper :: Maybe Char -> Integer
-signHelper c = case c of 
+signHelper c = case c of
     Just _ -> -1
     Nothing -> 1
 

@@ -1,0 +1,12 @@
+[cli]
+[Generic]
+files = **/*.hs
+bears = SpaceConsistencyBear
+no_orig = True
+use_spaces = True
+non-interactive = True
+default_actions = *: ApplyPatchAction
+
+[Haskell]
+files = **/*.hs
+bears = HaskellLintBear

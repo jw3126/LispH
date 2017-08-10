@@ -35,14 +35,14 @@ testM = do
     testEvalString "x" $ ExInteger 4
     evalString "(set x 5)"
     testEvalString "x" $ ExInteger 5
-    evalString "(set x (+ 1 1))" 
+    evalString "(set x (+ 1 1))"
     testEvalString "x" $ ExInteger 2
 
     evalString "(set sq (fn (a) (* a a)))"
     testEvalString "(sq 3)" $ ExInteger 9
 
     -- function argument shadows variable
-    evalString "(set x (+ 1 1))" 
+    evalString "(set x (+ 1 1))"
     evalString "(set cub (fn (x) (* x x x)))"
     testEvalString "(cub 3)" $ ExInteger 27
     testEvalString "x" $ ExInteger 2
@@ -53,7 +53,7 @@ testM = do
     testEvalString "((adder 1) 2)" $ ExInteger 3
 
     -- builtin functions
-    
+
     testEvalString "(+)" $ ExInteger 0
     testEvalString "(-)" $ ExInteger 0
     testEvalString "(*)" $ ExInteger 1

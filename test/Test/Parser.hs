@@ -1,4 +1,4 @@
-module Test.Parser 
+module Test.Parser
     (testParserMain)
 where
 
@@ -81,7 +81,7 @@ testParserMain = do
     testParse "(f \"abc\")" (ExList [ExSymbol "f", ExString "abc"])
     testParse "     (+ 1     1)" (ExList [ExSymbol "+", ExInteger 1, ExInteger 1])
 
-    ex <- generate arbitraryEx 
+    ex <- generate arbitraryEx
     putStrLn $ show ex
     putStrLn $ toString ex
     quickCheck prop_inverse

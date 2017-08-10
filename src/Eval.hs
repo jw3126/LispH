@@ -12,7 +12,7 @@ import Expr
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
-import Control.Monad.State.Strict 
+import Control.Monad.State.Strict
 import Control.Monad.Except
 
 type Store = Map.Map String Ex
@@ -58,7 +58,7 @@ insertStore key val = do
     store <- get
     put $ Map.insert key val store
     return val
-    
+
 
 builtinSpecialForms = [
     "set"
@@ -68,7 +68,7 @@ builtinSpecialForms = [
 
 type BuiltinFunction = ([Ex] -> InterpreterM Ex)
 type BuiltinFunctionRegistry = HashMap.HashMap String BuiltinFunction
-type RHF a b = 
+type RHF a b =
     String -> (b -> a -> b) -> b  -> BuiltinFunctionRegistry -> BuiltinFunctionRegistry
 -- the _ argument is for guiding type inference
 registerHaskellFunction :: (ExAble a, ExAble b) => RHF a b
@@ -86,7 +86,7 @@ rHBB = registerHaskellFunction
 builtinFunctionRegistry :: BuiltinFunctionRegistry
 builtinFunctionRegistry = let
     registry :: BuiltinFunctionRegistry
-    registry = HashMap.empty 
+    registry = HashMap.empty
     -- we need zero, one for to make typeinference easier
     in
      rHII  "+"     (+)    0
@@ -123,7 +123,7 @@ eval x = throwI $ TodoError $ show x
 -- in this case, we don't want to evaluate the arguments immediately
 --
 evalList :: Ex -> InterpreterM Ex
-evalList x@(ExList items) = evalListElements items >>= (\fargs-> case fargs of 
+evalList x@(ExList items) = evalListElements items >>= (\fargs-> case fargs of
         (f:args) -> (apply f args)
         [] -> throwI $ TodoError "eval empty list"
     )
@@ -138,10 +138,10 @@ evalListElements :: [Ex] -> InterpreterM [Ex]
 evalListElements = mapM eval
 
 evalBuiltinSpecialForm :: Ex -> InterpreterM Ex
-evalBuiltinSpecialForm (ExList ((ExSymbol "fn"):(ExList args):[body])) = 
+evalBuiltinSpecialForm (ExList ((ExSymbol "fn"):(ExList args):[body])) =
     return $ ExFunction args body
 
-evalBuiltinSpecialForm x@(ExList ((ExSymbol "set"):(ExSymbol key):[val])) = 
+evalBuiltinSpecialForm x@(ExList ((ExSymbol "set"):(ExSymbol key):[val])) =
     eval val >>= insertStore key
 
 evalBuiltinSpecialForm x = error $ "evalBuiltinSpecialForm on " ++ (show x)
@@ -168,12 +168,12 @@ applyHaskellFunction2 f eex1 ex2 = do
     return $ toEx $ f x1 x2
 
 foldlHaskellFunction :: (ExAble a, ExAble b) => (b -> a -> b) -> b -> [Ex] -> Errorful Ex
-foldlHaskellFunction f v0 exs = 
+foldlHaskellFunction f v0 exs =
     foldl (applyHaskellFunction2 f) (Right $ toEx v0) exs
 
 applyFunction :: Ex -> [Ex] -> InterpreterM Ex
 applyFunction (ExFunction sig body) args = if length sig == length args then
-        let 
+        let
             m = HashMap.fromList $ zip sig args
         in
             eval $ substitute m body

@@ -12,18 +12,22 @@ import System.IO
 import Control.Monad
 import Control.Monad.State.Lazy
 import Control.Monad.Except
+import Control.Applicative
 import System.Console.Haskeline
 
+-- https://hackage.haskell.org/package/haskeline-0.7.4.0/docs/src/System.Console.Haskeline.MonadException.html#RunIO
 instance MonadException m => MonadException (ExceptT Error m) where
     controlIO f = ExceptT $ controlIO $ \(RunIO run) -> let
                     run' = RunIO (fmap ExceptT . run . runExceptT)
-                    in fmap runExceptT $ f run'
+                    in (runExceptT <$> f run')
 
 repl :: InputT InterpreterM Ex
 repl = forever repl1
 
 mainrepl :: IO ()
-mainrepl = (evalI (runInputT defaultSettings repl ) emptyStore) >> return ()
+mainrepl = do
+    ex <- (evalI (runInputT defaultSettings repl ) emptyStore)
+    print ex
 
 inputPrompt :: String
 inputPrompt = "Repl> "
@@ -35,7 +39,7 @@ repl1 = do
     case inp of
         Nothing -> lift $ throwI $ ParserError "Nothing"
         Just s -> do
-            outputStrLn $ s
+            outputStrLn s
             eex <- lift $ evalString s
             outputStrLn $ show eex
             return eex

@@ -19,8 +19,8 @@ import GHC.Generics (Generic)
 
 type EvalResult = Either String Ex
 
-data Ex = ExInteger Integer 
-    | ExList [Ex] 
+data Ex = ExInteger Integer
+    | ExList [Ex]
     | ExSymbol String -- TODO ExVar
     | ExString String
     | ExFunction [Ex] Ex --TODO (String, Maybe Ex)
@@ -44,20 +44,20 @@ class ExAble t where
 
 -- is there a way to do this with less boiler plate?
 instance ExAble Integer where
-    toEx i = ExInteger i
+    toEx = ExInteger
     fromEx (ExInteger i) = Right i
     fromEx ex = Left $ TypeMismatch ex "Integer"
 
 instance ExAble Bool where
-    toEx b = ExBool b
+    toEx = ExBool
     fromEx (ExBool b) = Right b
     fromEx ex = Left $ TypeMismatch ex "Bool"
 
 instance ExAble String where
-    toEx s = ExString s
-    fromEx (ExString s) = Right $ s
+    toEx = ExString
+    fromEx (ExString s) = Right s
     fromEx ex = Left $ TypeMismatch ex "String"
-    
+
 
 falseString = "#f"
 trueString = "#t"
@@ -68,5 +68,5 @@ toString (ExSymbol s) = s
 toString (ExBool False) = falseString
 toString (ExBool True) = trueString
 toString (ExString s) = "\"" ++ s ++ "\""
-toString (ExList items) = "(" ++ (intercalate " " $ map toString items) ++ ")"
-toString (ExFunction args body) = toString $ ExList $ [ExSymbol "fn", ExList args, body]
+toString (ExList items) = "(" ++ unwords (map toString items) ++ ")"
+toString (ExFunction args body) = toString $ ExList [ExSymbol "fn", ExList args, body]
