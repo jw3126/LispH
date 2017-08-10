@@ -14,7 +14,6 @@ module Expr
     ) where
 
 import Data.Hashable
-import Data.List (intercalate)
 import GHC.Generics (Generic)
 
 type EvalResult = Either String Ex
@@ -59,7 +58,10 @@ instance ExAble String where
     fromEx ex = Left $ TypeMismatch ex "String"
 
 
+falseString :: String
 falseString = "#f"
+
+trueString ::String
 trueString = "#t"
 
 toString :: Ex -> String

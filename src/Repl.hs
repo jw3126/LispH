@@ -8,11 +8,8 @@ module Repl(
 import Parser
 import Expr
 import Eval
-import System.IO
-import Control.Monad
 import Control.Monad.State.Lazy
 import Control.Monad.Except
-import Control.Applicative
 import System.Console.Haskeline
 
 -- https://hackage.haskell.org/package/haskeline-0.7.4.0/docs/src/System.Console.Haskeline.MonadException.html#RunIO
@@ -26,7 +23,7 @@ repl = forever repl1
 
 mainrepl :: IO ()
 mainrepl = do
-    ex <- (evalI (runInputT defaultSettings repl ) emptyStore)
+    ex <- evalI (runInputT defaultSettings repl ) emptyStore
     print ex
 
 inputPrompt :: String
@@ -41,7 +38,7 @@ repl1 = do
         Just s -> do
             outputStrLn s
             eex <- lift $ evalString s
-            outputStrLn $ show eex
+            _ <- outputStrLn $ show eex
             return eex
 
 evalString :: String -> InterpreterM Ex

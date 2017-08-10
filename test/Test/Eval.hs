@@ -12,7 +12,7 @@ import Control.Monad.State.Lazy
 
 testEvalMain :: IO ()
 testEvalMain =
-    (evalI testM emptyStore) >>
+    evalI testM emptyStore >>
     putStrLn "testEvalMain"
 
 testEvalString :: String -> Ex -> InterpreterM ()

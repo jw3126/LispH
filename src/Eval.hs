@@ -59,7 +59,7 @@ insertStore key val = do
     put $ Map.insert key val store
     return val
 
-
+builtinSpecialForms :: [String]
 builtinSpecialForms = [
     "set"
     , "fn"
@@ -101,8 +101,10 @@ builtinFunctionRegistry = let
 -- "<"     (<)    True
 -- ">"     (>)    True
 -- ">="    (>=)   True
-
+builtinFunctions :: [String]
 builtinFunctions = HashMap.keys builtinFunctionRegistry
+
+builtin :: [String]
 builtin = builtinFunctions ++ builtinSpecialForms
 
 eval :: Ex -> InterpreterM Ex
@@ -111,11 +113,10 @@ eval x@(ExBool _) = return x
 eval x@(ExString _) = return x
 eval x@(ExFunction _ _) = return x
 eval x@(ExSymbol s) = if s `elem` builtin then return x else lookupInStore s
-eval x@(ExList ((ExSymbol s):t)) | s `elem` builtinFunctions = evalBuiltinFunction x
+eval x@(ExList ((ExSymbol s):_)) | s `elem` builtinFunctions = evalBuiltinFunction x
                       | s `elem` builtinSpecialForms = evalBuiltinSpecialForm x
                       | otherwise = evalList x
 eval x@(ExList _) = evalList x
-eval x = throwI $ TodoError $ show x
 
 -- evaluate a ExList
 --
@@ -123,7 +124,7 @@ eval x = throwI $ TodoError $ show x
 -- in this case, we don't want to evaluate the arguments immediately
 --
 evalList :: Ex -> InterpreterM Ex
-evalList x@(ExList items) = evalListElements items >>= (\fargs-> case fargs of
+evalList (ExList items) = evalListElements items >>= (\fargs-> case fargs of
         (f:args) -> (apply f args)
         [] -> throwI $ TodoError "eval empty list"
     )
@@ -141,19 +142,21 @@ evalBuiltinSpecialForm :: Ex -> InterpreterM Ex
 evalBuiltinSpecialForm (ExList ((ExSymbol "fn"):(ExList args):[body])) =
     return $ ExFunction args body
 
-evalBuiltinSpecialForm x@(ExList ((ExSymbol "set"):(ExSymbol key):[val])) =
+evalBuiltinSpecialForm (ExList ((ExSymbol "set"):(ExSymbol key):[val])) =
     eval val >>= insertStore key
 
 evalBuiltinSpecialForm x = error $ "evalBuiltinSpecialForm on " ++ (show x)
 
 evalBuiltinFunction :: Ex -> InterpreterM Ex
-evalBuiltinFunction x@(ExList (f:args)) = evalListElements args >>= applyBuiltinFunction f
+evalBuiltinFunction (ExList (f:args)) = evalListElements args >>= applyBuiltinFunction f
+evalBuiltinFunction ex = error("evalBuiltinFunction" ++ show ex)
 
 applyBuiltinFunction :: Ex -> [Ex] -> InterpreterM Ex
-applyBuiltinFunction (ExSymbol s)   t = let
+applyBuiltinFunction (ExSymbol s) t = let
     f :: [Ex] -> InterpreterM Ex
     f = fromJust $ HashMap.lookup s builtinFunctionRegistry
     in f t
+applyBuiltinFunction f args = error("applyBuiltinFunction" ++ show f ++ show args)
 
 applyHaskellFunction :: (ExAble a, ExAble o) => (a -> o) -> Ex -> Errorful Ex
 applyHaskellFunction f ex = do
@@ -179,10 +182,10 @@ applyFunction (ExFunction sig body) args = if length sig == length args then
             eval $ substitute m body
     else
         throwI $ WrongNumberOfArguments sig args
-applyFunction f args  = error $ "Not a function " ++ (show f)
+applyFunction f _  = error $ "Not a function " ++ (show f)
 
 -- TODO quote and functions...
 -- https://en.wikipedia.org/wiki/De_Bruijn_index
 substitute :: (HashMap.HashMap Ex Ex) -> Ex -> Ex
-substitute m ex@(ExList items) = ExList $ map (substitute m) items
+substitute m (ExList items) = ExList $ map (substitute m) items
 substitute m ex = HashMap.lookupDefault ex ex m
