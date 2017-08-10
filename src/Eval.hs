@@ -12,12 +12,17 @@ import Expr
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
-import Control.Monad.State.Lazy 
+import Control.Monad.State.Strict 
 import Control.Monad.Except
 
 type Store = Map.Map String Ex
-type InterpreterM a = StateT Store (ExceptT Error IO) a
-
+type InterpreterM = StateT Store (ExceptT Error IO)
+-- for reasons I do not understand
+--
+-- type InterpreterM t = StateT Store (ExceptT Error IO) t
+--
+-- would cause trouble. See
+-- https://stackoverflow.com/questions/9289893/declaring-instances-of-parameterized-type-synonyms
 exceptI :: Either Error t -> InterpreterM t
 exceptI x = lift inner where
     inner = case x of

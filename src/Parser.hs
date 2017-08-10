@@ -7,7 +7,7 @@ import Expr
 import Text.ParserCombinators.Parsec -- MegaParsec
 import Control.Monad
 
-parseEx s = parse expression "" s
+parseEx s = parse expression "parseEx error" s
 
 -- TODO split out lexer
 

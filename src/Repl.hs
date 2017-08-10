@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Repl(
     mainrepl,
     evalString
@@ -10,35 +12,37 @@ import System.IO
 import Control.Monad
 import Control.Monad.State.Lazy
 import Control.Monad.Except
+import System.Console.Haskeline
 
-repl :: InterpreterM Ex
+instance MonadException m => MonadException (ExceptT Error m) where
+    controlIO f = ExceptT $ controlIO $ \(RunIO run) -> let
+                    run' = RunIO (fmap ExceptT . run . runExceptT)
+                    in fmap runExceptT $ f run'
+
+repl :: InputT InterpreterM Ex
 repl = forever repl1
 
 mainrepl :: IO ()
-mainrepl = (evalI repl emptyStore) >> return ()
+mainrepl = (evalI (runInputT defaultSettings repl ) emptyStore) >> return ()
 
-repl1 :: InterpreterM Ex
+inputPrompt :: String
+inputPrompt = "Repl> "
+
+repl1 :: InputT InterpreterM Ex
 repl1 = do
-    liftIO $ putStr "lisp>"
-    liftIO $ hFlush stdout
-    ex <- liftIO readEx
---     liftIO $ putStrLn $ show ex
---     liftIO $ putStrLn $ toString ex
-    exres <- eval ex
---     liftIO $ putStrLn $ show exres
-    liftIO $ putStrLn $ toString $ exres
-    return exres
-
-readEx :: IO Ex
-readEx = do
-    line <- getLine
-    case parseEx line of
-        Left err -> do 
-            print err
-            readEx
-        Right ex -> return ex
+    inp <- getInputLine inputPrompt
+    outputStrLn $ show inp
+    case inp of
+        Nothing -> lift $ throwI $ ParserError "Nothing"
+        Just s -> do
+            outputStrLn $ s
+            eex <- lift $ evalString s
+            outputStrLn $ show eex
+            return eex
 
 evalString :: String -> InterpreterM Ex
 evalString s = case parseEx s of
-    Left err -> throwI $ ParserError $ show err
+    Left err -> do
+        liftIO $ putStrLn "parse error"
+        throwI $ ParserError $ show err
     Right ex -> eval ex

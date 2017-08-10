@@ -25,6 +25,7 @@ library
                      , hashable
                      , containers
                      , mtl
+                     , haskeline
   default-language:    Haskell2010
 
 executable Lispy-exe
